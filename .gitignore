@@ -1,0 +1,7 @@
+# Ignore data snapshots and databases
+data/raw/*.json
+*.db
+
+# Ignore Python cache
+**/__pycache__/
+*.pyc
