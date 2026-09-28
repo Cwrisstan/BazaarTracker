@@ -1,7 +1,10 @@
-# Ignore data snapshots and databases
-data/raw/*.json
+# Local collector data, including raw files and SQLite sidecars
+/data/
 *.db
-
-# Ignore Python cache
+*.sqlite3
+*.sqlite3-*
 **/__pycache__/
 *.pyc
+.venv/
+
+.venv-dashboard/
