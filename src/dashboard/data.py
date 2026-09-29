@@ -161,3 +161,20 @@ def storage_sizes(database, raw_dir, max_entries=50000):
         except OSError:
             result['partial'] = True
     return result
+
+
+def market_snapshot(path, end_ms, max_age_ms=None):
+    """One exact market snapshot, never per-item fallback or mixed timestamps.
+
+    Optional tolerance supports honest fixed-period comparisons. Source-first
+    primary keys bound product retrieval without migrations or new indexes.
+    """
+    with connect(path) as conn:
+        found = rows(conn, '''SELECT * FROM snapshots WHERE source_updated_ms<=?
+            ORDER BY source_updated_ms DESC LIMIT 1''', (end_ms,))
+        snapshot = found[0] if found else None
+        if snapshot is None or (max_age_ms is not None and end_ms - snapshot['source_updated_ms'] > max_age_ms):
+            return None, [], False
+        products = rows(conn, '''SELECT * FROM quick_status WHERE source_updated_ms=?
+            ORDER BY product_id LIMIT ?''', (snapshot['source_updated_ms'], MAX_ITEMS + 1))
+    return snapshot, products[:MAX_ITEMS], len(products) > MAX_ITEMS
