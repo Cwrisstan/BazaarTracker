@@ -82,7 +82,6 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(self.conn.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0], 0)
 
     def test_commit_failure_leaves_recoverable_orphan(self):
-        # Deferred FK fails at commit, after raw publication.
         self.conn.execute('CREATE TABLE broken(x INTEGER REFERENCES snapshots(source_updated_ms) DEFERRABLE INITIALLY DEFERRED)')
         self.conn.execute('CREATE TRIGGER break_commit AFTER INSERT ON snapshots BEGIN INSERT INTO broken VALUES (1); END')
         with self.assertRaises(sqlite3.IntegrityError):

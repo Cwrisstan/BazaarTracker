@@ -1,4 +1,3 @@
-"""Validated snapshot persistence, conservative storage checks, and HTTP fetching."""
 import gzip
 import json
 import logging
@@ -52,7 +51,6 @@ def number(value, label, integer=False):
 
 
 def validate(payload):
-    """Reject the entire snapshot on any malformed product; empty books are valid."""
     if not isinstance(payload, dict) or payload.get("success") is not True:
         raise InvalidPayload("response must be an object with success=true")
     source = number(payload.get("lastUpdated"), "lastUpdated", integer=True)
@@ -103,7 +101,6 @@ class Storage:
         self.raw.mkdir(parents=True, exist_ok=True)
 
     def usage(self):
-        # Count all project data, including legacy files and SQLite sidecars.
         return sum(p.stat().st_size for p in self.root.rglob("*") if p.is_file())
 
     def check(self, incoming=0):
@@ -113,7 +110,6 @@ class Storage:
         LOG.info("storage used=%d budget=%d free=%d reserve=%d", used, self.budget, free, reserve)
         if used + reserve > self.budget:
             raise StorageFull(f"data budget: {used} used + {reserve} reserved > {self.budget}")
-        # Raw directory may be a separately mounted filesystem.
         raw_free = shutil.disk_usage(self.raw).free
         if min(free, raw_free) - reserve < self.min_free:
             raise StorageFull(f"free disk reserve: free={min(free, raw_free)} required={self.min_free + reserve}")
@@ -132,7 +128,6 @@ class Storage:
     def write_raw(self, source, compressed):
         final = self.raw / f"bazaar-v1-{source}.json.gz"
         temporary = final.with_name(final.name + ".tmp")
-        # O_NOFOLLOW prevents a stale/malicious symlink from redirecting writes.
         fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "wb") as stream:
             stream.write(compressed)
@@ -202,7 +197,6 @@ def persist(conn, storage, payload, collected_at=None):
     except (ValueError, TypeError) as exc:
         raise InvalidPayload("response contains invalid JSON values") from exc
     compressed = gzip.compress(compact, mtime=0)
-    # Allow for raw staging plus indexed DB rows and rollback journal growth.
     storage.check(2 * len(compressed) + max(4 * len(compact), 1024 * (len(quick) + len(levels))))
     with conn:
         conn.execute("BEGIN IMMEDIATE")
@@ -211,7 +205,6 @@ def persist(conn, storage, payload, collected_at=None):
         conn.executemany("INSERT INTO quick_status VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", quick)
         conn.executemany("INSERT INTO order_book_levels VALUES (?, ?, ?, ?, ?, ?, ?)", levels)
         archive.write_snapshot(conn, source, quick, payload['products'], storage.research_universe)
-        # Publish raw before commit: a crash can leave an orphan, never a success marker.
         storage.write_raw(source, compressed)
     LOG.info("new snapshot source_updated_ms=%d products=%d levels=%d", source, len(quick), len(levels))
     storage.check(0)
@@ -230,7 +223,6 @@ def retry_after_seconds(value, now=None):
 
 
 def backoff(failures, retry_after=0, maximum=300):
-    # Server-directed waits may exceed the exponential cap; never retry early.
     return max(min(maximum, 2 ** min(failures, 20)), retry_after)
 
 

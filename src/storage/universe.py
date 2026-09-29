@@ -1,4 +1,3 @@
-"""Explicit point-in-time membership; default all is provisional lossless capture."""
 import json
 from pathlib import Path
 

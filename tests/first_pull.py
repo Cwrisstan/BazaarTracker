@@ -1,4 +1,3 @@
-"""Manual one-shot check; importing this module never accesses the network."""
 from src.ingestion.run_collector import main
 
 if __name__ == "__main__":

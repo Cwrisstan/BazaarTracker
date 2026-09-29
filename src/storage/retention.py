@@ -1,4 +1,3 @@
-"""Only V2-owned temporary SQL is eligible; permanent packs and legacy rows are not."""
 import math
 import time
 from . import archive, schema
@@ -14,7 +13,6 @@ def prune(conn, book_hours=24, quick_hours=48, now_ms=None, batch_size=16):
         raise ValueError('batch_size must be positive')
     now = int(time.time() * 1000) if now_ms is None else now_ms
     removed = {'order_book_levels': 0, 'quick_status': 0}
-    # Newest source timestamps may arrive late; retention follows durable ingest time.
     candidates = conn.execute('''SELECT source_updated_ms,stored_at_ms,sql_books_pruned,quick_pruned
         FROM v2_snapshots WHERE legacy_protected=0 AND quick_pruned=0 AND
         ((sql_books_pruned=0 AND stored_at_ms<?) OR stored_at_ms<?)

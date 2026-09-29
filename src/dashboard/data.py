@@ -1,4 +1,3 @@
-"""Bounded, read-only queries. No ingestion imports or network access."""
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import os
@@ -19,14 +18,11 @@ class Unavailable(Exception):
 
 @contextmanager
 def connect(path):
-    """No creation, write statements, temporary tables, or long-held read locks."""
     conn = None
     try:
         conn = sqlite3.connect(Path(path).resolve().as_uri() + '?mode=ro', uri=True, timeout=0.15)
         conn.row_factory = sqlite3.Row
-        # Keep cache/pruning markers and archive fallback in one consistent view.
         conn.execute('BEGIN')
-        # Whitelist only read opcodes, also denying ATTACH and writable PRAGMAs.
         allowed = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION}
         conn.set_authorizer(lambda action, *_: sqlite3.SQLITE_OK if action in allowed else sqlite3.SQLITE_DENY)
         deadline = time.monotonic() + 0.75
@@ -51,7 +47,6 @@ def has_v2(conn):
 
 
 def archived_history(conn, item, start_ms, end_ms, limit):
-    """Bound Python decode time as well as SQL work; never fill missing observations."""
     deadline = time.monotonic() + 0.65
     result = []
     for row in conn.execute('''SELECT source_updated_ms FROM v2_snapshots
@@ -156,7 +151,6 @@ def gaps(records):
 
 
 def chart_records(history_rows, snapshots):
-    """Explicit groups prevent lines bridging outages or missing item observations."""
     positions = {row['source_updated_ms']: i for i, row in enumerate(snapshots)}
     result, segment, previous = [], 0, None
     for row in history_rows:
@@ -173,7 +167,6 @@ def chart_records(history_rows, snapshots):
 
 
 def storage_sizes(database, raw_dir, max_entries=50000):
-    """Read-only stat checks; never traverse symlinks; bound expensive directory scans."""
     def size(path):
         try:
             return path.stat().st_size if path.is_file() and not path.is_symlink() else 0
@@ -207,11 +200,6 @@ def storage_sizes(database, raw_dir, max_entries=50000):
 
 
 def market_snapshot(path, end_ms, max_age_ms=None):
-    """One exact market snapshot, never per-item fallback or mixed timestamps.
-
-    Optional tolerance supports honest fixed-period comparisons. Source-first
-    primary keys bound product retrieval without migrations or new indexes.
-    """
     with connect(path) as conn:
         found = rows(conn, '''SELECT * FROM snapshots WHERE source_updated_ms<=?
             ORDER BY source_updated_ms DESC LIMIT 1''', (end_ms,))

@@ -1,4 +1,3 @@
-"""CLI scheduler. One collector per data root; waits are interruptible."""
 import argparse
 from contextlib import closing
 from datetime import datetime, timezone
@@ -61,8 +60,6 @@ def run(args, stop, session, monotonic=time.monotonic):
         except BlockingIOError:
             LOG.error("stopping: another collector owns this data directory")
             return 1
-        # Check migration readiness before cleanup; expired raw may then free
-        # space before the writable opener performs its budget check.
         if storage.db.exists():
             with closing(sqlite3.connect(storage.db.as_uri() + '?mode=ro', uri=True)) as preflight:
                 if preflight.execute("SELECT 1 FROM sqlite_master WHERE name='snapshots'").fetchone():

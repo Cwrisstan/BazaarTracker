@@ -1,4 +1,3 @@
-"""Deterministic analytics and chart checks; never use the collector database."""
 import importlib.util
 import unittest
 from src.dashboard import analytics as a, data

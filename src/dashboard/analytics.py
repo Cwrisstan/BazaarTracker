@@ -1,9 +1,3 @@
-"""Pure snapshot analytics; no I/O, fills, resampling, or trading signals.
-
-API semantics: https://api.hypixel.net/#tag/SkyBlock/paths/~1v2~1skyblock~1bazaar/get
-Prices are top-2%-by-volume aggregates. Volumes are standing order quantities.
-Spread % uses buyPrice as denominator: an aggregate price gap, not net return.
-"""
 import math
 
 
@@ -39,7 +33,6 @@ def calculate_volume_metrics(row):
 
 
 def market_metrics(current, baseline=()):
-    """Compare exact snapshot endpoints; absent products retain unknown changes."""
     previous = {row['product_id']: row for row in baseline}
     result = []
     for row in current:
@@ -52,17 +45,11 @@ def market_metrics(current, baseline=()):
 
 
 def calculate_order_book_depth(levels):
-    """Accumulate each API side from its nearest price outward.
-
-    buy_summary ascends; sell_summary descends. Keep side names rather than
-    translating them into stock-market bid/ask terminology. Missing quantity
-    makes subsequent cumulative depth unknown, never a silently smaller sum.
-    """
     result = []
     for side in ('buy_summary', 'sell_summary'):
         selected = [row for row in levels if row['api_side'] == side]
         if any(not valid(row.get('price_per_unit')) for row in selected):
-            continue  # Cannot order an invalid-price side reliably.
+            continue
         selected = sorted(selected, key=lambda row: row['price_per_unit'], reverse=side == 'sell_summary')
         cumulative = 0
         for row in selected:
@@ -74,7 +61,6 @@ def calculate_order_book_depth(levels):
 def filter_market(records, search='', minimum_volume=0, minimum_side_volume=0,
                   spread_min=None, spread_max=None, price_min=None, price_max=None,
                   change_min=None, change_max=None):
-    """Only active filters exclude unknown values; leave unknowns visible otherwise."""
     def within(value, low, high):
         if low is None and high is None:
             return True

@@ -1,4 +1,3 @@
-"""Plotly figures independent of Streamlit; extension points for future overlays."""
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from src.dashboard import analytics, data
@@ -18,7 +17,6 @@ def style(fig, title, height=360):
 
 
 def history_values(history, snapshots, getter):
-    """Insert null separators across collection/source gaps and absent items."""
     segments = data.chart_records(history, snapshots)[::2]
     x, y, previous = [], [], None
     for row, segment in zip(history, segments):
@@ -103,8 +101,6 @@ def activity(records):
 def opportunity(records):
     eligible = [row for row in records if row['spread_pct'] is not None and row['total_volume'] is not None
                 and row['total_volume'] > 0 and row['two_sided_volume'] is not None]
-    # Bubble area scales with the smaller side's quantity. The minimum diameter
-    # keeps zero-sided books visible; their exact zero remains in hover text.
     size = [row['two_sided_volume'] for row in eligible]
     fig = go.Figure(go.Scatter(x=[row['total_volume'] for row in eligible], y=[row['spread_pct'] for row in eligible],
         mode='markers', text=[row['product_id'] for row in eligible],

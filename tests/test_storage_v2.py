@@ -1,4 +1,3 @@
-"""Storage V2 contracts, crash recovery and retention on disposable databases."""
 from contextlib import closing
 from copy import deepcopy
 import gzip

@@ -1,4 +1,3 @@
-"""Additive Storage V2 schema. V1 tables stay intact for compatibility and recovery."""
 SCHEMA_VERSION = 2
 DDL = (
     '''CREATE TABLE storage_migrations (

@@ -1,8 +1,3 @@
-"""Offline sizing experiment, not an archive writer or migration.
-
-Requires pyarrow; reads V1 using mode=ro, writes only into an automatically removed
-TemporaryDirectory, and emits sizes as JSON. Retains float64 prices/int64 counts.
-"""
 import argparse
 from contextlib import closing
 import json
@@ -56,7 +51,6 @@ def benchmark(database):
                             f[f'{prefix}_notional_{k}'] = sum(r['price_per_unit'] * r['amount'] for r in book[:k])
                     features.append(f)
         pq.write_table(pa.Table.from_pylist(features), root / 'features.parquet', compression='zstd')
-        # Verify lossless book roundtrip against source rows before using the size.
         checked = 0
         source = iter(conn.execute('SELECT source_updated_ms,product_id,api_side,level_index,price_per_unit,amount,orders FROM order_book_levels ORDER BY source_updated_ms,product_id,api_side,level_index'))
         reverse_products = {v: k for k, v in products.items()}

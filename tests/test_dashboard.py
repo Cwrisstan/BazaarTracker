@@ -1,4 +1,3 @@
-"""All databases here are disposable fixtures; never use the collector database."""
 from contextlib import closing
 import hashlib
 import importlib.util
@@ -80,7 +79,6 @@ class DashboardDataTests(unittest.TestCase):
         self.assertEqual([row['product_id'] for row in products], ['APPLE', 'PEAR'])
         self.assertFalse(limited)
         self.assertTrue(all(row['source_updated_ms'] == snapshot['source_updated_ms'] for row in products))
-        # A missing one-hour baseline must not become a two-hour comparison.
         self.assertEqual(data.market_snapshot(self.db, self.end - 3600000, 180000), (None, [], False))
         baseline, _, _ = data.market_snapshot(self.db, self.end - 540000, 180000)
         self.assertEqual(baseline['source_updated_ms'], self.end - 540000)
@@ -109,7 +107,6 @@ class DashboardDataTests(unittest.TestCase):
         self.assertEqual(len(data.gaps(snapshots)), 1)
         points = data.chart_records(history, snapshots)
         self.assertEqual([p['segment'] for p in points[::2]], ['0', '0', '1'])
-        # Missing an item in an otherwise healthy sequence must also split lines.
         contiguous = [dict(history[0]), dict(history[1]), dict(history[1])]
         contiguous[2]['source_updated_ms'] += 60000
         contiguous[2]['collected_at_utc'] = data.utc(contiguous[2]['source_updated_ms'])
@@ -125,7 +122,7 @@ class DashboardDataTests(unittest.TestCase):
         with self.assertRaises(data.Unavailable):
             with data.connect(self.db) as conn:
                 conn.set_authorizer(None)
-                conn.execute('DELETE FROM snapshots')  # URI mode=ro independently denies writes.
+                conn.execute('DELETE FROM snapshots')
         data.health(self.db)
         data.items(self.db)
         data.timeline(self.db, 0, self.end)

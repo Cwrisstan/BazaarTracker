@@ -1,8 +1,3 @@
-"""Transactional permanent packs and explicit full-summary availability.
-
-Call write_snapshot inside the same transaction as V1 inserts. No pack is a trade
-feed; complete means complete API summaries, never the unobserved exchange book.
-"""
 import json
 import time
 from . import codec, features, universe
@@ -33,7 +28,6 @@ def write_snapshot(conn, source, quick, products, policy, legacy=False, stored_a
             retained_levels += len(book[1]) + len(book[2])
     packed, checksum = codec.encode('compact', source, compact)
     full, full_checksum = codec.encode('books', source, books)
-    # Roundtrip before publication catches encoder contract regressions.
     if codec.decode(packed, checksum, 'compact', source) != compact or codec.decode(full, full_checksum, 'books', source) != books:
         raise codec.ArchiveError('archive roundtrip failed')
     conn.execute('INSERT INTO compact_history VALUES(?,?,?,?,?,?)',
@@ -74,7 +68,6 @@ def observations(conn, source):
 
 
 def read_book(conn, source, product_id, require_permanent=True):
-    """Return availability and exact rows; unavailable is distinct from empty."""
     key = conn.execute('SELECT product_key FROM products WHERE product_id=?', (product_id,)).fetchone()
     manifest = conn.execute('SELECT sql_books_pruned FROM v2_snapshots WHERE source_updated_ms=?', (source,)).fetchone()
     if manifest is None:
@@ -94,7 +87,6 @@ def read_book(conn, source, product_id, require_permanent=True):
 
 
 def verify_snapshot(conn, source):
-    """Validate permanent checksums/counts before temporary SQL can be removed."""
     compact = unpack(conn, source, 'compact')
     books = unpack(conn, source, 'books')
     expected = conn.execute('SELECT product_count FROM snapshots WHERE source_updated_ms=?', (source,)).fetchone()[0]

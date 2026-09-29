@@ -1,8 +1,3 @@
-"""Read-only storage inventory and before/after comparison (standard library only).
-
-Run between collector sessions for comparable file sizes. A bounded SQLite read
-transaction gives consistent SQL counts, but filesystem stats are not transactional.
-"""
 import argparse
 from contextlib import closing
 from datetime import datetime, timezone
@@ -23,7 +18,6 @@ DBSTAT_SQL = ('SELECT name, count(*) AS pages, sum(pgsize) AS bytes, '
 
 
 def inventory(root):
-    """Count regular files without following symlinks; errors abort the measurement."""
     files, skipped = {}, []
     if not root.exists():
         return {'files': files, 'bytes': 0, 'file_count': 0, 'skipped_symlinks': skipped,
@@ -57,7 +51,7 @@ def measure(database, raw, timeout=30, sqlite_cli=None):
     if database.is_symlink():
         raise ValueError('database must not be a symlink')
     database, raw = database.resolve(), raw.resolve() if not raw.is_symlink() else raw
-    stat = database.stat()  # Missing databases fail; never create one.
+    stat = database.stat()
     started = time.time()
     report = {'format_version': 1, 'measured_at_utc': datetime.now(timezone.utc).isoformat(),
               'database': str(database), 'raw_directory': str(raw),

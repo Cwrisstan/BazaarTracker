@@ -1,4 +1,3 @@
-"""Launch with streamlit run src/dashboard/app.py; never starts ingestion."""
 import os
 from pathlib import Path
 import sys

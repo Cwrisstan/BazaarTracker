@@ -1,4 +1,3 @@
-"""Additive, resumable V1 backfill. No SQL/raw retention runs during migration."""
 from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
@@ -25,7 +24,6 @@ def backup(conn, storage):
     folder.mkdir(exist_ok=True)
     path = folder / ('before-v2-' + uuid.uuid4().hex + '.sqlite3')
     staging = path.with_suffix('.sqlite3.partial')
-    # A partial backup never becomes the backup referenced by migration state.
     with closing(sqlite3.connect(staging)) as destination:
         conn.backup(destination)
         if destination.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
@@ -55,7 +53,6 @@ def snapshot_input(conn, source):
 
 
 def migrate(storage, after_snapshot=None):
-    """Caller holds the collector lock. Every existing observation stays in place."""
     if not storage.db.is_file() or storage.db.is_symlink():
         raise ValueError('migration requires an existing regular V1 database')
     with closing(sqlite3.connect(storage.db.as_uri() + '?mode=rw', uri=True)) as conn:
@@ -67,7 +64,6 @@ def migrate(storage, after_snapshot=None):
         if status is None:
             if conn.execute('PRAGMA integrity_check').fetchone()[0] != 'ok' or conn.execute('PRAGMA foreign_key_check').fetchone():
                 raise ValueError('source database integrity check failed')
-            # Refuse unexpected tables lacking the audited V1 columns.
             expected = {'snapshots': ('source_updated_ms','collected_at_utc','product_count'),
                         'quick_status': ('source_updated_ms','product_id',*archive.QUICK_COLUMNS),
                         'order_book_levels': ('source_updated_ms','product_id','api_side','level_index','price_per_unit','amount','orders')}
@@ -92,7 +88,7 @@ def migrate(storage, after_snapshot=None):
                 archive.verify_snapshot(conn, source)
             count += 1
             if after_snapshot:
-                after_snapshot(source)  # Tests can interrupt after a durable checkpoint.
+                after_snapshot(source)
         with conn:
             conn.execute('BEGIN IMMEDIATE')
             for (source,) in conn.execute('SELECT source_updated_ms FROM snapshots'):

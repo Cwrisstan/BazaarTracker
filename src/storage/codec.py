@@ -1,4 +1,3 @@
-"""Checksummed gzip JSON packs. Encoding v1 preserves Python JSON numeric values."""
 import gzip
 import hashlib
 import json

@@ -1,4 +1,3 @@
-# Local collector data, including raw files and SQLite sidecars
 /data/
 *.db
 *.sqlite3

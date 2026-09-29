@@ -1,4 +1,3 @@
-"""Back up and additively migrate V1. Never starts collection or runs retention."""
 import argparse
 import fcntl
 import json

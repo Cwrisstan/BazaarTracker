@@ -1,4 +1,3 @@
-"""Profiler safety and delta accounting against disposable fixture databases."""
 from copy import deepcopy
 import hashlib
 from pathlib import Path

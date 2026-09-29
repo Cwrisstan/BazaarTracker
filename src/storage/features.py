@@ -1,4 +1,3 @@
-"""Versioned API-side primitives; no bid/ask reinterpretation or fill assumptions."""
 from decimal import Decimal, localcontext
 import math
 
@@ -23,7 +22,6 @@ def side_primitives(book, side):
             value = entry.get(field)
             if type(value) is not int or not 0 <= value <= 2**63 - 1:
                 raise ValueError('invalid book ' + field)
-    # Stable sorting preserves API order among equal prices; archive keeps original order.
     ordered = sorted(book, key=lambda row: row['pricePerUnit'], reverse=side == 'sell_summary')
     result = {'best_price': ordered[0]['pricePerUnit'] if ordered else None,
               'level_count': len(book), 'summary_depth': sum(r['amount'] for r in book),
@@ -31,8 +29,6 @@ def side_primitives(book, side):
                        | (ZERO_PRICE if any(r['pricePerUnit'] == 0 for r in book) else 0)}
     for k in (1, 5, 10):
         result[f'depth_{k}'] = sum(r['amount'] for r in ordered[:k])
-    # Decimal text avoids overflow/rounding in price*large-quantity accumulation.
-    # It reflects the decimal representation of the validated API numbers.
     with localcontext() as context:
         context.prec = 400
         for k in (5, 10):

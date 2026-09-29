@@ -1,4 +1,3 @@
-"""Streamlit page composition; calculations live in analytics, figures in charts."""
 import time
 from statistics import median
 
@@ -259,7 +258,6 @@ def scanner(db, raw, revision, end, health):
     left, right = st.columns([3, 1])
     sort_by = left.selectbox('Sort by', list(COLUMNS), index=4, format_func=COLUMNS.get, key='scanner_sort')
     descending = right.checkbox('Descending', value=True)
-    # Missing metrics always sort last, in either direction.
     known = sorted((row for row in filtered if row.get(sort_by) is not None), key=lambda row: row[sort_by], reverse=descending)
     ordered = known + [row for row in filtered if row.get(sort_by) is None]
     st.caption(f'{len(ordered):,} / {len(records):,} products · click column headings to sort the table.')
