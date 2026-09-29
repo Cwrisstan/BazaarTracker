@@ -20,16 +20,15 @@ This week's work adds a storage-aware collector and a read-only dashboard:
   retention removes only expired collector-owned raw files. Structured history is
   never automatically deleted. One-shot and duration modes, bounded backoff, and
   logs support supervised trials.
-- **Dashboard:** Collector health, separate database/raw sizes, item histories over
-  1/6/24 hours, and latest stored order books are available through Streamlit.
-  Explicit read-only connections, manual refresh, and bounded cached queries keep
-  it independent of ingestion. Charts break across collection gaps; stale books
-  are labeled, and prices are identified as API aggregates.
-- **Verification:** The implementation's final regression run passed all 26 offline
-  tests, including 10 dashboard tests against temporary fixtures. A fixture-only
-  Streamlit startup check returned HTTP 200 and shut down cleanly. Browser visual
-  verification and a Docker image build were not completed; the Docker daemon
-  was unavailable.
+- **Dashboard:** Four read-only terminal pages: Market Overview, Item Explorer,
+  Scanner, and Collector. Interactive Plotly price, spread, standing-volume,
+  cumulative depth and market-opportunity charts use existing stored fields.
+  Independent price scales, liquidity filters and explicit history limits keep
+  comparisons readable. No collection, schema or data-integrity behavior changed.
+- **Verification:** The analytics/dashboard regression suite includes the existing
+  collector tests, fixture-only read-only query checks and Streamlit page tests.
+  See the dashboard section for the verification command and metric definitions.
+  Docker image verification remains outside this dashboard change.
 
 The ten-minute collection trial completed normally with 10 new snapshots, each
 containing 2,197 products and roughly 60,700 order-book levels. Logged logical data
@@ -247,19 +246,68 @@ the collector's total-budget measurement. Symlinks are not followed. Files chang
 during a scan can make the size approximate; inaccessible or capped scans are
 flagged as partial. No files are opened for writing or removed.
 
-Choose a stored item and a 1-, 6-, or 24-hour window ending at refresh time (filtered
-by API source timestamp). The chart labels `buyPrice` / `sellPrice` as quick-status
-aggregate values, not executable quotes. It never forward-fills missing prices.
-Separate line groups break across source/collection gaps longer than 180 seconds
-and snapshots missing the selected item. The coverage table lists substantial
-internal gaps; recorded endpoints do not claim continuous coverage. The threshold
-is a dashboard heuristic for the default 60-second poll, not evidence of an outage.
+The dashboard has four workspaces:
 
-Latest volumes, order counts, `buy_summary`, and `sell_summary` refer to the selected
-item's newest stored snapshot at or before refresh time, independently of the chart
-window. Empty books stay empty; no older nonempty book is substituted. Books and
-health show a stale warning when source data is older than 180 seconds. API side
-names are preserved with no trading interpretation, profit estimate or fill promise.
+- **Market Overview:** current market cards, absolute top movers, largest spreads,
+  standing-volume activity bars, and an interactive Plotly opportunity map. Rankings
+  share a minimum quantity filter on both sides, initially 1,000 units per side.
+- **Item Explorer:** searchable products; price, spread, standing-unit and order
+  metrics; 1h/6h/24h/7d/All history controls; independent price scales with shared
+  time axes, shared-scale or indexed alternatives; spread and volume histories;
+  cumulative order-book depth; expandable raw books.
+- **Scanner:** sortable market table with product search, total and smaller-side
+  quantity minimums, and optional spread, buy-price and price-change ranges.
+- **Collector:** storage sizes, counts, source/collection timestamps and ranges,
+  coverage gaps and health details. Stale warnings also appear on market pages.
+
+### Metric definitions and limitations
+
+[Hypixel's official Bazaar API documentation](https://api.hypixel.net/#tag/SkyBlock/paths/~1v2~1skyblock~1bazaar/get)
+describes prices as volume-weighted aggregates over the top 2% and volumes as
+standing quantities in orders. We preserve the API side names rather than label
+books with stock-market bid/ask terminology.
+
+- Spread = `buyPrice - sellPrice`, in coins per unit.
+- Spread % = `100 * (buyPrice - sellPrice) / buyPrice`. This is a price-gap
+  measure, not net profit or return on capital. Both prices must be positive;
+  missing/zero prices yield an unavailable spread. Negative spreads are retained.
+- Total standing volume = `buyVolume + sellVolume`; smaller-side liquidity =
+  `min(buyVolume, sellVolume)`; orders = `buyOrders + sellOrders`. Unknown inputs
+  remain unknown. Summing quantities across different products is an activity
+  proxy, not market capitalization or coin value.
+- Price change = `100 * (current buyPrice / baseline buyPrice - 1)`. Periods end
+  at the displayed market snapshot, not the wall clock. Fixed periods need an
+  observed baseline no more than 180 seconds before their target. Recorded range
+  uses the first stored snapshot. Actual endpoint times are displayed; missing
+  products have blank changes. Endpoint comparisons do not assert intervening
+  continuous coverage.
+- Depth accumulates stored amounts independently on `buy_summary` (ascending
+  price) and `sell_summary` (descending price), nearest price outward. Dotted
+  aggregate-price markers are context, not executable quotes. The API summaries
+  are a limited slice of the book, not full market depth.
+- Opportunity-map x is total standing units on a log scale; y is spread %;
+  bubble area is smaller-side standing quantity. A minimum marker size keeps
+  zero-sided books visible when the liquidity filter is disabled. Hover gives
+  exact quantities and prices. Invalid spreads and nonpositive total volume are
+  excluded and the plotted count is shown.
+
+History windows end at manual refresh time. Only actual observations are drawn;
+no resampling, invented history or forward filling occurs. Lines break across
+source/collection gaps over 180 seconds and missing item observations. Indexed
+price mode uses the first displayed observation as 100 separately for each series;
+if that initial value is invalid, that normalized series is unavailable. Current
+cards and books use the item's latest observation at or before refresh, independent
+of the chart window; absent/latest and stale items are flagged. Empty books stay
+empty. Snapshots are not trades, and fees, execution slippage and fills are not
+modeled. `movingWeek` is not used as a historical trade feed.
+
+Analytics live in `src/dashboard/analytics.py` (pure calculations), Plotly figure
+builders in `charts.py`, read-only SQL in `data.py`, and Streamlit page composition
+in `pages.py`. `app.py` handles navigation and shared refresh state. Overlay and
+signal calculations can extend these modules without coupling to Streamlit.
+Volatility, technical indicators, forecasts, trading signals, and ML are deferred;
+collect a longer, well-covered history before adding sample-qualified rolling
+metrics. The existing short trial cannot support meaningful 1h/7d comparisons.
 
 SQLite is opened with URI `mode=ro`, a 150 ms lock timeout, a read-only SQL authorizer,
 and a roughly 750 ms SQLite VM execution budget per short connection. No connection
@@ -269,7 +317,8 @@ primary keys are used without adding indexes; all-history distinct item discover
 and snapshot counts can exceed the budget on large databases and then fail visibly.
 Only the first 5,000 discovered IDs are offered (sorted for display); charts and
 coverage are capped at the newest 3,000 observations per window, and books at 1,000
-levels total. Truncation is disclosed; no downsampling is performed. File scans
+levels total. Market queries read one exact timestamp (up to 5,000 products), never
+backfill absent products from older snapshots; subset aggregates are labeled. Truncation is disclosed; no downsampling is performed. File scans
 stop after 50,000 entries or roughly 750 ms and report a partial lower bound.
 
 Run offline verification in the dashboard environment:
@@ -281,4 +330,7 @@ Run offline verification in the dashboard environment:
 Dashboard tests create separate temporary fixture databases and cover read-only
 write denial, unchanged fixture bytes, missing/empty data, locks, item selection,
 time windows, stale data, gap segmentation, result limits, and Streamlit AppTest
-interactions. AppTest is behavioral testing, not browser-based visual verification.
+interactions across all four pages. Pure analytics tests cover missing values,
+spread denominators, endpoint changes, depth sorting and accumulation, filtering,
+and gap-safe Plotly traces. AppTest is behavioral testing; visual layout and chart
+rendering require separate browser verification.
