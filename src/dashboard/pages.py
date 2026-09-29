@@ -140,7 +140,9 @@ def explorer(db, raw, revision, end, health):
     st.subheader('Order-book depth')
     if limited:
         st.warning('Book display limited to 1,000 levels in total. Cumulative depth is partial.')
-    if book:
+    if not current.get('book_available', True):
+        st.warning('Historical book unavailable: this product was outside the recorded research universe and temporary SQL depth has expired. Compact features cannot reconstruct full depth.')
+    elif book:
         plot(charts.order_book(book, current), f'depth_{item}')
     else:
         st.info('Empty stored book; no levels fabricated.')
@@ -156,8 +158,10 @@ def explorer(db, raw, revision, end, health):
                 levels = [{k: v for k, v in row.items() if k != 'api_side'} for row in book if row['api_side'] == side]
                 if levels:
                     st.dataframe(levels, hide_index=True)
-                else:
+                elif current.get('book_available', True):
                     st.info('Empty stored book; no levels fabricated.')
+                else:
+                    st.info('Historical depth unavailable; not an empty book.')
     semantics()
 
 

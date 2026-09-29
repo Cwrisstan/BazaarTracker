@@ -1,0 +1,20 @@
+{
+  "snapshots": 26,
+  "products": 2197,
+  "quick_rows": 57122,
+  "level_rows_roundtrip_verified": 1586259,
+  "pyarrow_version": "25.0.1",
+  "bytes": {
+    "compact.sqlite3": 2871296,
+    "products.parquet": 23354,
+    "quick.parquet": 672018,
+    "levels.parquet": 12071457,
+    "features.parquet": 1968254
+  },
+  "notes": [
+    "26-snapshot sample is not a sustained daily benchmark; extrapolations are provisional.",
+    "Features include quick fields plus 16 book primitives, not a finalized production schema.",
+    "Compact SQLite file includes quick rows only; add product dictionary, metadata and any extra indexes.",
+    "Archive files omit production manifest/checksum/quality metadata; include these in a later acceptance benchmark."
+  ]
+}

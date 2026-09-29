@@ -1,0 +1,501 @@
+{
+  "average_per_stored_snapshot": {
+    "database_bytes": 7274968.615384615,
+    "note": "Stock averages, not measured marginal growth; DB includes indexes/free pages.",
+    "rows": {
+      "order_book_levels": 61009.96153846154,
+      "quick_status": 2197.0,
+      "snapshots": 1.0
+    }
+  },
+  "backups": {
+    "bytes": 0,
+    "file_count": 0,
+    "files": {},
+    "owned_snapshot_bytes": 0,
+    "owned_snapshot_count": 0,
+    "skipped_symlinks": []
+  },
+  "counts": {
+    "order_book_levels": 1586259,
+    "quick_status": 57122,
+    "snapshots": 26
+  },
+  "database": "/Users/christianiglesias/Documents/GitHub/BazaarTracker/data/bazaar.sqlite3",
+  "database_allocated_bytes": 202256384,
+  "database_bytes": 189149184,
+  "database_identity": [
+    16777234,
+    3039902
+  ],
+  "format_version": 1,
+  "journal_mode": "delete",
+  "latest_product_count": 2197,
+  "mean_retained_raw_snapshot_bytes": 456891.8461538461,
+  "measured_at_utc": "2026-09-29T06:02:44.195792+00:00",
+  "measurement_seconds": 1.7336959838867188,
+  "objects": [
+    {
+      "bytes": 92602368,
+      "name": "order_book_levels",
+      "pages": 22608,
+      "payload_bytes": 82040258,
+      "unused_bytes": 677258
+    },
+    {
+      "bytes": 3661824,
+      "name": "quick_status",
+      "pages": 894,
+      "payload_bytes": 3285405,
+      "unused_bytes": 35276
+    },
+    {
+      "bytes": 4096,
+      "name": "snapshots",
+      "pages": 1,
+      "payload_bytes": 988,
+      "unused_bytes": 2866
+    },
+    {
+      "bytes": 90689536,
+      "name": "sqlite_autoindex_order_book_levels_1",
+      "pages": 22141,
+      "payload_bytes": 70062744,
+      "unused_bytes": 15602327
+    },
+    {
+      "bytes": 2187264,
+      "name": "sqlite_autoindex_quick_status_1",
+      "pages": 534,
+      "payload_bytes": 1768645,
+      "unused_bytes": 240849
+    },
+    {
+      "bytes": 4096,
+      "name": "sqlite_schema",
+      "pages": 1,
+      "payload_bytes": 1520,
+      "unused_bytes": 2445
+    }
+  ],
+  "objects_source": "SQLite CLI dbstat (separate read; may differ during collection)",
+  "pages": {
+    "auto_vacuum": 0,
+    "freelist_count": 0,
+    "page_count": 46179,
+    "page_size": 4096
+  },
+  "product_count_distinct": 2197,
+  "range": {
+    "first_collection": "2026-09-28T05:50:35.875606+00:00",
+    "first_source_ms": 1790574618706,
+    "last_collection": "2026-09-28T15:39:26.846294+00:00",
+    "last_source_ms": 1790609958770
+  },
+  "raw": {
+    "bytes": 251474850,
+    "file_count": 59,
+    "files": {
+      "2026-09-05/18-08-27.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7292871,
+        "mtime_ns": 1788631708088046376,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-11-45.json": {
+        "allocated_bytes": 7290880,
+        "bytes": 7289873,
+        "mtime_ns": 1788631905666563475,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-13-52.json": {
+        "allocated_bytes": 7286784,
+        "bytes": 7286228,
+        "mtime_ns": 1788632032364102803,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-13-57.json": {
+        "allocated_bytes": 7286784,
+        "bytes": 7285882,
+        "mtime_ns": 1788632037256036673,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-14-57.json": {
+        "allocated_bytes": 7290880,
+        "bytes": 7287984,
+        "mtime_ns": 1788632097879348912,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-15-58.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7290907,
+        "mtime_ns": 1788632158520959290,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-16-59.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7292130,
+        "mtime_ns": 1788632219213349441,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-17-59.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7292017,
+        "mtime_ns": 1788632279844744567,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-19-00.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7291871,
+        "mtime_ns": 1788632340503513921,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-20-00.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7292593,
+        "mtime_ns": 1788632401144464758,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-21-01.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7293090,
+        "mtime_ns": 1788632461753567914,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-22-02.json": {
+        "allocated_bytes": 7299072,
+        "bytes": 7296557,
+        "mtime_ns": 1788632522392689240,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-23-02.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7292958,
+        "mtime_ns": 1788632583035290998,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-24-03.json": {
+        "allocated_bytes": 7299072,
+        "bytes": 7295374,
+        "mtime_ns": 1788632643691784456,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-25-04.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7292881,
+        "mtime_ns": 1788632704329874695,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-26-04.json": {
+        "allocated_bytes": 7299072,
+        "bytes": 7297625,
+        "mtime_ns": 1788632764987321319,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-27-05.json": {
+        "allocated_bytes": 7299072,
+        "bytes": 7297036,
+        "mtime_ns": 1788632825599782072,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-28-06.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7294047,
+        "mtime_ns": 1788632886242537614,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-29-06.json": {
+        "allocated_bytes": 7299072,
+        "bytes": 7295643,
+        "mtime_ns": 1788632946899883311,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-30-07.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7294723,
+        "mtime_ns": 1788633007553618811,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-31-07.json": {
+        "allocated_bytes": 7299072,
+        "bytes": 7297342,
+        "mtime_ns": 1788633068174628100,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-32-08.json": {
+        "allocated_bytes": 7299072,
+        "bytes": 7295748,
+        "mtime_ns": 1788633128820072422,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-33-09.json": {
+        "allocated_bytes": 7299072,
+        "bytes": 7296668,
+        "mtime_ns": 1788633189420822578,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-34-09.json": {
+        "allocated_bytes": 7303168,
+        "bytes": 7299694,
+        "mtime_ns": 1788633250078078025,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-35-10.json": {
+        "allocated_bytes": 7303168,
+        "bytes": 7299933,
+        "mtime_ns": 1788633310801774602,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-36-11.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7294604,
+        "mtime_ns": 1788633371485076088,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-37-11.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7293939,
+        "mtime_ns": 1788633432135465173,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-38-12.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7293777,
+        "mtime_ns": 1788633492902997805,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-39-13.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7292806,
+        "mtime_ns": 1788633553534286909,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-40-13.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7291117,
+        "mtime_ns": 1788633614156985290,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-41-14.json": {
+        "allocated_bytes": 7294976,
+        "bytes": 7291255,
+        "mtime_ns": 1788633674772238930,
+        "owned_snapshot": false
+      },
+      "2026-09-05/18-42-15.json": {
+        "allocated_bytes": 7299072,
+        "bytes": 7295145,
+        "mtime_ns": 1788633735400077517,
+        "owned_snapshot": false
+      },
+      "bazaar-v1-1790574618706.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455731,
+        "mtime_ns": 1790574636220610577,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790574738726.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455797,
+        "mtime_ns": 1790574749995901204,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790574798855.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455830,
+        "mtime_ns": 1790574810462495706,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790574858702.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455712,
+        "mtime_ns": 1790574870917973305,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790574918705.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455751,
+        "mtime_ns": 1790574931375448609,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790574978711.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455692,
+        "mtime_ns": 1790574991830087625,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790575038713.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455371,
+        "mtime_ns": 1790575052292027126,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790575098721.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455393,
+        "mtime_ns": 1790575112748420861,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790575158735.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455264,
+        "mtime_ns": 1790575173373169501,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790575218721.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455290,
+        "mtime_ns": 1790575233847482987,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790575278752.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 455045,
+        "mtime_ns": 1790575294288572666,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609098693.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 458138,
+        "mtime_ns": 1790609111153223013,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609158712.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457999,
+        "mtime_ns": 1790609172379990056,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609218987.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 458199,
+        "mtime_ns": 1790609233183432334,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609278710.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 458037,
+        "mtime_ns": 1790609293989349843,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609338697.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457833,
+        "mtime_ns": 1790609354853613882,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609398717.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 458011,
+        "mtime_ns": 1790609415641762520,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609458727.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457930,
+        "mtime_ns": 1790609476488839445,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609518772.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457851,
+        "mtime_ns": 1790609537299716665,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609578698.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457955,
+        "mtime_ns": 1790609598114259108,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609638722.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457588,
+        "mtime_ns": 1790609658909147085,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609698730.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457651,
+        "mtime_ns": 1790609719721854549,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609778724.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457777,
+        "mtime_ns": 1790609785115941421,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609838707.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457751,
+        "mtime_ns": 1790609845907867525,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609898723.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457670,
+        "mtime_ns": 1790609906652223539,
+        "owned_snapshot": true
+      },
+      "bazaar-v1-1790609958770.json.gz": {
+        "allocated_bytes": 458752,
+        "bytes": 457922,
+        "mtime_ns": 1790609967556752229,
+        "owned_snapshot": true
+      },
+      "hypixel_bazaar.db": {
+        "allocated_bytes": 6303744,
+        "bytes": 6201344,
+        "mtime_ns": 1788633735408017646,
+        "owned_snapshot": false
+      }
+    },
+    "owned_snapshot_bytes": 11879188,
+    "owned_snapshot_count": 26,
+    "skipped_symlinks": []
+  },
+  "raw_directory": "/Users/christianiglesias/Documents/GitHub/BazaarTracker/data/raw",
+  "schema": [
+    {
+      "name": "order_book_levels",
+      "sql": "CREATE TABLE order_book_levels (\n                source_updated_ms INTEGER NOT NULL, product_id TEXT NOT NULL,\n                api_side TEXT NOT NULL CHECK(api_side IN ('buy_summary', 'sell_summary')),\n                level_index INTEGER NOT NULL, price_per_unit REAL NOT NULL,\n                amount INTEGER NOT NULL, orders INTEGER NOT NULL,\n                PRIMARY KEY (source_updated_ms, product_id, api_side, level_index),\n                FOREIGN KEY (source_updated_ms, product_id)\n                    REFERENCES quick_status(source_updated_ms, product_id)\n            )",
+      "tbl_name": "order_book_levels",
+      "type": "table"
+    },
+    {
+      "name": "quick_status",
+      "sql": "CREATE TABLE quick_status (\n                source_updated_ms INTEGER NOT NULL REFERENCES snapshots(source_updated_ms),\n                product_id TEXT NOT NULL,\n                sell_price REAL NOT NULL, sell_volume INTEGER NOT NULL, sell_orders INTEGER NOT NULL,\n                buy_price REAL NOT NULL, buy_volume INTEGER NOT NULL, buy_orders INTEGER NOT NULL,\n                sell_moving_week INTEGER NOT NULL, buy_moving_week INTEGER NOT NULL,\n                PRIMARY KEY (source_updated_ms, product_id)\n            )",
+      "tbl_name": "quick_status",
+      "type": "table"
+    },
+    {
+      "name": "snapshots",
+      "sql": "CREATE TABLE snapshots (\n                source_updated_ms INTEGER PRIMARY KEY,\n                collected_at_utc TEXT NOT NULL,\n                product_count INTEGER NOT NULL\n            )",
+      "tbl_name": "snapshots",
+      "type": "table"
+    },
+    {
+      "name": "sqlite_autoindex_order_book_levels_1",
+      "sql": null,
+      "tbl_name": "order_book_levels",
+      "type": "index"
+    },
+    {
+      "name": "sqlite_autoindex_quick_status_1",
+      "sql": null,
+      "tbl_name": "quick_status",
+      "type": "index"
+    }
+  ],
+  "sidecar_bytes": {
+    "-journal": 0,
+    "-shm": 0,
+    "-wal": 0
+  },
+  "sqlite_version": "3.50.4",
+  "warnings": [
+    "SQL counts are one read transaction; filesystem sizes may race an active collector. Stop collection between measurements for clean comparisons.",
+    "Python SQLite lacks dbstat; use --sqlite-cli /usr/bin/sqlite3 if available."
+  ]
+}

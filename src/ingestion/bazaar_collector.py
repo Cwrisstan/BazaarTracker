@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
 import requests
+from src.storage import archive, schema, universe
 
 LOG = logging.getLogger(__name__)
 HYPIXEL_URL = "https://api.hypixel.net/v2/skyblock/bazaar"
@@ -87,7 +88,7 @@ def validate(payload):
 
 class Storage:
     def __init__(self, root, raw_dir=None, budget=GIB, min_free=5 * GIB,
-                 retention=48 * 3600, headroom=16 * 1024 ** 2):
+                 retention=48 * 3600, headroom=16 * 1024 ** 2, research_universe=None):
         self.root = Path(root).resolve()
         self.raw = Path(raw_dir).resolve() if raw_dir else self.root / "raw"
         if self.raw == self.root or self.root not in self.raw.parents:
@@ -97,6 +98,7 @@ class Storage:
             raise ValueError("database must be outside raw directory")
         self.budget, self.min_free = budget, min_free
         self.retention, self.headroom = retention, headroom
+        self.research_universe = universe.normalize(universe.DEFAULT if research_universe is None else research_universe)
         self.root.mkdir(parents=True, exist_ok=True)
         self.raw.mkdir(parents=True, exist_ok=True)
 
@@ -148,10 +150,12 @@ def open_database(storage):
     storage.check()
     conn = sqlite3.connect(storage.db)
     try:
+        if conn.execute("SELECT 1 FROM sqlite_master WHERE name='snapshots'").fetchone():
+            schema.require_ready(conn)
         conn.execute("PRAGMA foreign_keys=ON")
         conn.execute("PRAGMA journal_mode=DELETE")
         conn.execute("PRAGMA synchronous=FULL")
-        conn.executescript("""
+        conn.executescript("""BEGIN IMMEDIATE;
             CREATE TABLE IF NOT EXISTS snapshots (
                 source_updated_ms INTEGER PRIMARY KEY,
                 collected_at_utc TEXT NOT NULL,
@@ -175,6 +179,9 @@ def open_database(storage):
                     REFERENCES quick_status(source_updated_ms, product_id)
             );
         """)
+        if not schema.exists(conn):
+            schema.create(conn, datetime.now(timezone.utc).isoformat())
+        conn.commit()
         return conn
     except BaseException:
         conn.close()
@@ -182,6 +189,7 @@ def open_database(storage):
 
 
 def persist(conn, storage, payload, collected_at=None):
+    schema.require_ready(conn)
     source, quick, levels = validate(payload)
     collected_at = collected_at or datetime.now(timezone.utc)
     if collected_at.tzinfo is None or collected_at.utcoffset() is None:
@@ -202,6 +210,7 @@ def persist(conn, storage, payload, collected_at=None):
                      (source, collected_at.astimezone(timezone.utc).isoformat(), len(quick)))
         conn.executemany("INSERT INTO quick_status VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", quick)
         conn.executemany("INSERT INTO order_book_levels VALUES (?, ?, ?, ?, ?, ?, ?)", levels)
+        archive.write_snapshot(conn, source, quick, payload['products'], storage.research_universe)
         # Publish raw before commit: a crash can leave an orphan, never a success marker.
         storage.write_raw(source, compressed)
     LOG.info("new snapshot source_updated_ms=%d products=%d levels=%d", source, len(quick), len(levels))

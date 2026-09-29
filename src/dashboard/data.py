@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import sqlite3
 import time
+from src.storage import archive, codec, schema
 
 MAX_POINTS = 3000
 MAX_ITEMS = 5000
@@ -23,13 +24,15 @@ def connect(path):
     try:
         conn = sqlite3.connect(Path(path).resolve().as_uri() + '?mode=ro', uri=True, timeout=0.15)
         conn.row_factory = sqlite3.Row
+        # Keep cache/pruning markers and archive fallback in one consistent view.
+        conn.execute('BEGIN')
         # Whitelist only read opcodes, also denying ATTACH and writable PRAGMAs.
         allowed = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION}
         conn.set_authorizer(lambda action, *_: sqlite3.SQLITE_OK if action in allowed else sqlite3.SQLITE_DENY)
         deadline = time.monotonic() + 0.75
         conn.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
         yield conn
-    except sqlite3.Error as exc:
+    except (sqlite3.Error, codec.ArchiveError) as exc:
         raise Unavailable('Database unavailable, busy, incompatible, or query exceeded its 0.75s budget. Try Refresh. ' + str(exc)) from exc
     finally:
         if conn is not None:
@@ -38,6 +41,30 @@ def connect(path):
 
 def rows(conn, sql, parameters=()):
     return [dict(row) for row in conn.execute(sql, parameters).fetchall()]
+
+
+def has_v2(conn):
+    found = conn.execute("SELECT 1 FROM sqlite_master WHERE name='v2_snapshots'").fetchone() is not None
+    if found and schema.state(conn) != 'ready':
+        raise Unavailable('Storage V2 migration is incomplete; resume migration before reading the dashboard.')
+    return found
+
+
+def archived_history(conn, item, start_ms, end_ms, limit):
+    """Bound Python decode time as well as SQL work; never fill missing observations."""
+    deadline = time.monotonic() + 0.65
+    result = []
+    for row in conn.execute('''SELECT source_updated_ms FROM v2_snapshots
+            WHERE quick_pruned=1 AND source_updated_ms BETWEEN ? AND ?
+            ORDER BY source_updated_ms DESC''', (start_ms, end_ms)):
+        if time.monotonic() > deadline:
+            raise Unavailable('Archived history exceeded the dashboard decode budget; use a shorter window or offline research reader.')
+        found = next((r for r in archive.observations(conn, row[0]) if r['product_id'] == item), None)
+        if found is not None:
+            result.append(found)
+        if len(result) >= limit:
+            break
+    return result
 
 
 def health(path):
@@ -51,6 +78,9 @@ def health(path):
 
 def items(path):
     with connect(path) as conn:
+        if has_v2(conn):
+            found = rows(conn, 'SELECT product_id FROM products ORDER BY product_id LIMIT ?', (MAX_ITEMS + 1,))
+            return [row['product_id'] for row in found[:MAX_ITEMS]], len(found) > MAX_ITEMS
         found = rows(conn, 'SELECT DISTINCT product_id FROM quick_status LIMIT ?', (MAX_ITEMS + 1,))
     return sorted(row['product_id'] for row in found[:MAX_ITEMS]), len(found) > MAX_ITEMS
 
@@ -69,6 +99,9 @@ def history(path, item, start_ms, end_ms):
             JOIN snapshots s ON s.source_updated_ms=q.source_updated_ms
             WHERE q.source_updated_ms BETWEEN ? AND ? AND q.product_id=?
             ORDER BY q.source_updated_ms DESC LIMIT ?''', (start_ms, end_ms, item, MAX_POINTS + 1))
+        if has_v2(conn):
+            result += archived_history(conn, item, start_ms, end_ms, MAX_POINTS + 1)
+            result.sort(key=lambda r: r['source_updated_ms'], reverse=True)
     return list(reversed(result[:MAX_POINTS])), len(result) > MAX_POINTS
 
 
@@ -78,9 +111,19 @@ def current_item(path, item, end_ms):
             JOIN snapshots s ON s.source_updated_ms=q.source_updated_ms
             WHERE q.source_updated_ms<=? AND q.product_id=?
             ORDER BY q.source_updated_ms DESC LIMIT 1''', (end_ms, item))
+        v2 = has_v2(conn)
+        if v2:
+            result += archived_history(conn, item, result[0]['source_updated_ms'] + 1 if result else 0, end_ms, 1)
+            result.sort(key=lambda r: r['source_updated_ms'], reverse=True)
         if not result:
             return None, [], False
         latest = result[0]
+        if v2:
+            book = archive.read_book(conn, latest['source_updated_ms'], item, require_permanent=False)
+            latest['book_available'] = book['available']
+            latest['book_permanent'] = book['permanent']
+            latest['book_availability_reason'] = book['reason']
+            return latest, book['levels'][:1000], len(book['levels']) > 1000
         book = rows(conn, '''SELECT api_side, level_index, price_per_unit, amount, orders
             FROM order_book_levels WHERE source_updated_ms=? AND product_id=?
             ORDER BY api_side, level_index LIMIT 1001''', (latest['source_updated_ms'], item))
@@ -175,6 +218,11 @@ def market_snapshot(path, end_ms, max_age_ms=None):
         snapshot = found[0] if found else None
         if snapshot is None or (max_age_ms is not None and end_ms - snapshot['source_updated_ms'] > max_age_ms):
             return None, [], False
+        if has_v2(conn):
+            pruned = conn.execute('SELECT quick_pruned FROM v2_snapshots WHERE source_updated_ms=?', (snapshot['source_updated_ms'],)).fetchone()
+            if pruned is not None and pruned[0]:
+                products = archive.observations(conn, snapshot['source_updated_ms'])
+                return snapshot, products[:MAX_ITEMS], len(products) > MAX_ITEMS
         products = rows(conn, '''SELECT * FROM quick_status WHERE source_updated_ms=?
             ORDER BY product_id LIMIT ?''', (snapshot['source_updated_ms'], MAX_ITEMS + 1))
     return snapshot, products[:MAX_ITEMS], len(products) > MAX_ITEMS

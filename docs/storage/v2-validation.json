@@ -1,0 +1,98 @@
+{
+  "method": "Offline replay of 26 existing raw snapshots into disposable V2 database; no HTTP requests or sustained collection. Pruning only on disposable replay.",
+  "migration_state": "ready",
+  "backup": "/Users/christianiglesias/Documents/GitHub/BazaarTracker/data/backups/before-v2-a9f388f2d6994fbab2a0aa809d62461b.sqlite3",
+  "backup_sha256": "9ad2025dd324fa049d6ef2db3145f7392fd1b43b0fc40ebfa9ea6f26ce0b7f11",
+  "original_sql_verified": {
+    "snapshots": {
+      "rows": 26,
+      "sha256": "19c9258a912a9c685b324fa0ee17d60ccf0bbd0d1a5380744edd1ace82ee13d3"
+    },
+    "quick_status": {
+      "rows": 57122,
+      "sha256": "524b474956de661df5ea0d369f27b11f9b54c29a35152e407cc336102c8beec0"
+    },
+    "order_book_levels": {
+      "rows": 1586259,
+      "sha256": "04957cae2235b14006444911239063c41f8f9b1e54557d4acf009e6d710981f9"
+    }
+  },
+  "raw_and_legacy_files_unchanged": 59,
+  "level_rows_roundtrip_verified": 1586259,
+  "replayed_snapshots": 26,
+  "replay_rows_pruned": {
+    "order_book_levels": 1586259,
+    "quick_status": 57122
+  },
+  "restart_duplicate_rejected": true,
+  "replay_permanent_growth": {
+    "compact_history": {
+      "payload_bytes": 3845457,
+      "payload_bytes_per_new_snapshot": 147902.1923076923,
+      "projection_excluding_btree_overhead": {
+        "day_bytes": 212979156.92307693,
+        "week_bytes": 1490854098.4615386,
+        "month_30d_bytes": 6389374707.692307,
+        "weeks_25_bytes": 37271352461.53846
+      }
+    },
+    "historical_books": {
+      "payload_bytes": 7384838,
+      "payload_bytes_per_new_snapshot": 284032.23076923075,
+      "projection_excluding_btree_overhead": {
+        "day_bytes": 409006412.3076923,
+        "week_bytes": 2863044886.153846,
+        "month_30d_bytes": 12270192369.230768,
+        "weeks_25_bytes": 71576122153.84615
+      }
+    }
+  },
+  "replay_permanent_btree_delta_bytes": 11399168,
+  "replay_after_expiry": {
+    "migration": {
+      "version": 2,
+      "state": "ready",
+      "backup_path": null,
+      "backup_sha256": null,
+      "started_at_utc": "2026-09-29T06:04:38.702145+00:00",
+      "completed_at_utc": "2026-09-29T06:04:38.702145+00:00"
+    },
+    "compact_history": {
+      "blocks": 26,
+      "observations": 57122,
+      "payload_bytes": 3845457,
+      "payload_bytes_per_snapshot": 147902.1923076923
+    },
+    "historical_books": {
+      "blocks": 26,
+      "product_books": 57122,
+      "levels": 1586259,
+      "payload_bytes": 7384838,
+      "payload_bytes_per_snapshot": 284032.23076923075
+    },
+    "sql_row_classes": {
+      "quick_status": {
+        "legacy_protected": 0,
+        "temporary": 0
+      },
+      "order_book_levels": {
+        "legacy_protected": 0,
+        "temporary": 0
+      }
+    },
+    "note": "Permanent gzip blocks live inside SQLite, not separate archive files. Payload bytes exclude B-tree overhead. Old protected SQL and temporary SQL share tables; dbstat cannot split their pages exactly.",
+    "table_and_index_bytes": {
+      "compact_history": 3858432,
+      "historical_books": 7421952,
+      "quick_status": 8192,
+      "order_book_levels": 8192
+    },
+    "permanent_total_btree_bytes": 11431936
+  },
+  "replay_database_bytes_after_expiry": 200577024,
+  "notes": [
+    "SQL file retains free pages after DELETE; no VACUUM was run.",
+    "Permanent payload projections exclude B-tree metadata; actual B-tree delta also reported.",
+    "Default provisional universe captured all products; no permanent universe was selected."
+  ]
+}

@@ -1,15 +1,31 @@
 # BazaarTracker
 
 A lightweight Python collector for Hypixel SkyBlock Bazaar snapshots. Implemented:
-validated collection, restart-safe deduplication, SQLite quick-status and order-book
-history, compressed raw responses, retention, storage checks, and retry logging.
+validated collection, restart-safe deduplication, permanent compressed market/book
+history, bounded SQL serving data, compressed raw responses, storage checks, and retry logging.
 A separate read-only Streamlit dashboard explores the stored history. Discord alerts
 and arbitrage detection are not implemented. There is no trade feed, trading
 automation, or prediction model.
 
-## Weekly update — September 28, 2026
+## Storage V2
 
-This week's work adds a storage-aware collector and a read-only dashboard:
+Storage V2 preserves the normal 60-second collection cadence and all-product
+quick-status/book-primitives history in checksummed compressed SQLite blocks.
+New detailed SQL books expire after 24 hours; hot quick-status rows after 48 hours.
+Permanent blocks, snapshot timestamps and migrated V1 rows are never pruned.
+Raw gzip retention remains 48 hours. Full API-summary books are archived according
+to a versioned JSON universe policy; the conservative provisional default is **all
+products**, not a finalized research universe. An explicit include list can reduce
+future permanent book storage, while compact history still covers all products.
+
+Read [Storage V2 operations and schema](docs/storage-v2.md) for migration, membership,
+retention, research access, profiler commands and measured validation. The original
+[storage audit](docs/storage-audit.md) is the V1 design baseline; its Parquet sizing
+experiment is not a measurement of the V2 gzip encoding.
+
+## Historical V1 update — September 28, 2026
+
+The following describes the V1 implementation and its original collection trial:
 
 - **Reliable snapshot history:** API source timestamps are separate from UTC
   collection times. Transactional inserts and unique keys prevent duplicates across
@@ -44,8 +60,18 @@ Discord alerts, arbitrage detection, and automated trading remain unimplemented.
 
 ## Setup and run
 
-Python 3.11+ on macOS/Linux (the process lock uses `fcntl`), or Docker. From the
-repository root:
+Python 3.11+ on macOS/Linux (the process lock uses `fcntl`), or Docker. Existing V1
+databases require an explicit additive migration **before** running the collector:
+
+```sh
+.venv/bin/python tools/migrate_storage_v2.py
+```
+
+The migrator locks the collector root, creates a verified backup under
+`data/backups/`, and resumes interrupted backfills. It does not fetch data, delete
+rows, or clean raw files. New empty databases initialize V2 directly. Backups count
+toward the storage budget and are never automatically deleted. From the repository
+root, for a new installation:
 
 ```sh
 python3 -m venv .venv
@@ -73,6 +99,9 @@ All configuration is through CLI flags (`--help`):
 | `--budget-gib` | `1` | Project data budget, GiB = 2^30 bytes |
 | `--min-free-gib` | `5` | Free disk space to preserve |
 | `--raw-retention-hours` | `48` | Raw-file age limit |
+| `--sql-book-retention-hours` | `24` | New V2 SQL-book cache lifetime after ingestion |
+| `--hot-history-hours` | `48` | New V2 quick-status cache lifetime; must be at least SQL-book retention |
+| `--research-universe` | omitted | JSON policy; omitted means provisional all-product lossless books |
 | `--headroom-mib` | `16` | Base write reserve, MiB = 2^20 bytes |
 | `--timeout` | `10` | HTTP connect/read timeout in seconds |
 | `--once` | off | One request, no retries |
@@ -97,7 +126,9 @@ has a composite primary key `(source_updated_ms, product_id)` and preserves all
 eight existing price/volume/order/moving-week fields. `order_book_levels` adds
 `api_side`, zero-based `level_index`, `price_per_unit`, `amount`, and `orders`.
 Reconstruct each book with a source/product/side filter and `ORDER BY level_index`.
-All three tables are inserted in one transaction, with foreign keys enabled.
+These serving tables and both permanent compressed packs are inserted in one
+transaction, with foreign keys enabled. Source timestamps remain in permanent
+`snapshots` rows after new SQL serving rows expire.
 
 The two books keep the API names `buy_summary` and `sell_summary` and their array
 order. No bid/ask or instant-trade interpretation is assigned. The docs describe
@@ -123,26 +154,29 @@ the database, SQLite journals/WAL/SHM if present, and temporary raw files. Logs
 report usage, reserve, request failures, rejected snapshots, counts, duplicates,
 and stop reasons. Console logs redirected outside data-dir are outside the budget.
 
-Before initialization and each collection, expired raw files are removed and
-capacity checked. Before snapshot writes, an additional estimate reserves twice
+Schema readiness is checked before any retention runs. Before each collection,
+expired V2 SQL serving rows and owned raw files are pruned and capacity checked. Before snapshot writes, an additional estimate reserves twice
 the compressed size and the larger of four times uncompressed JSON size or 1 KiB
 per structured row, plus the configurable base headroom. Disk free space is checked
 on both database and raw filesystems. Usage is checked again after commit. Storage
-exhaustion or a write failure stops collection; structured history is never pruned.
-The database will eventually fill the budget even with raw retention enabled.
+exhaustion or a write failure stops collection. Only V2-owned temporary SQL rows
+are pruned, after permanent-pack verification. Migrated SQL history and permanent
+research packs are protected. Permanent data still grows; storage remains budgeted.
 
 These are conservative pre-write estimates, **not a perfectly enforced hard
 quota**: SQLite page/index/journal costs, filesystem allocation, other processes,
 and a single unexpectedly large response can differ from estimates. JSON is held
 in memory; HTTP response size is not bounded. No automatic VACUUM is performed.
 
-Retention removes only regular, non-symlink files directly in the configured raw
+Raw-file retention removes only regular, non-symlink files directly in the configured raw
 directory matching the reserved `bazaar-v1-<positive integer>.json.gz` namespace
 (or its `.tmp` staging suffix), whose filesystem modification time is older than
 the retention window. Do not place unrelated files in this reserved namespace.
 Recent files, nested legacy directories, unrelated names, databases, and symlinks
 are left alone. Retention runs only while the collector runs, including startup;
-file age follows collection/write time, not the API timestamp.
+file age follows collection/write time, not the API timestamp. SQL retention uses
+the separate durable ingestion timestamp and does not use raw-file age. See the
+[V2 retention policy](docs/storage-v2.md#retention-and-safety) for archive checks.
 
 Raw writes use a temporary file, fsync, atomic rename, and directory fsync before
 the SQLite commit. SQLite uses FULL synchronous mode and rollback journaling.
@@ -189,6 +223,28 @@ Default limits still apply, including 5 GiB free inside the mounted filesystem.
 
 ## Measure real growth
 
+Use the repeatable read-only profiler for row counts, raw-file inventory, SQLite
+page accounting, and retention-aware before/after comparisons:
+
+```sh
+.venv/bin/python tools/profile_storage.py --output /tmp/bazaar-before.json
+# Run a separately budgeted collection trial, then:
+.venv/bin/python tools/profile_storage.py --previous /tmp/bazaar-before.json --output /tmp/bazaar-after.json
+```
+
+Reports use bytes and include per-snapshot and day/week/30-day/25-week projections
+when new snapshots exist. Add `--sqlite-cli /usr/bin/sqlite3` for table/index
+attribution when that SQLite build supports `dbstat`. Reports never overwrite
+existing files and must be outside the database/raw directories. Exact SQL counts
+have a default 30-second budget; prefer measurements between collector sessions.
+Raw net growth is separated from newly observed gzip production because retention
+can make net growth negative. No collection or cleanup is triggered by profiling.
+
+See the [storage audit and proposed Storage V2 design](docs/storage-audit.md) for
+measured bottlenecks, lossless compression experiments, research tradeoffs, and a
+migration proposal. The implemented V2 retention and encoding choices are documented separately in
+[Storage V2](docs/storage-v2.md); the original audit remains a historical reference.
+
 Before and after a trial, record both logical bytes (matching collector accounting)
 and allocated disk usage:
 
@@ -206,7 +262,15 @@ legacy files and orphan cleanup from representative estimates; duplicates reduce
 growth. After retention starts, total net growth understates raw production.
 Repeat over representative hours and compare free space and configured headroom.
 Approximate days remaining as `(budget - current_usage - write_reserve) / daily_DB_growth`
-once raw storage stabilizes. This is an estimate, not a guarantee.
+once raw storage stabilizes. This V1 estimate is not a guarantee.
+
+For V2, use the profiler's `storage_v2` classes and `comparison.permanent_archive_delta`
+(or `permanent_btree_projection` when dbstat is available). Overall SQLite net growth
+mixes permanent packs with expiring caches and reused free pages. Begin a new baseline
+after migration; before/after comparisons deliberately reject changed schemas.
+The default 1 GiB budget is a safety stop, not sufficient capacity for a full
+24-hour SQL book cache at the audited cardinality. Choose a supervised-run budget
+explicitly; V2 has not silently raised it.
 
 
 ## Read-only Streamlit dashboard
@@ -313,8 +377,11 @@ SQLite is opened with URI `mode=ro`, a 150 ms lock timeout, a read-only SQL auth
 and a roughly 750 ms SQLite VM execution budget per short connection. No connection
 is cached or left open during rendering. Missing/empty/incompatible databases and
 temporary locks display messages with a Refresh option. Existing source-first
-primary keys are used without adding indexes; all-history distinct item discovery
+primary keys are used without adding indexes; V1 all-history distinct item discovery
 and snapshot counts can exceed the budget on large databases and then fail visibly.
+V2 uses its product registry and falls back to permanent compact packs after hot
+history expires. Archive decoding has a separate bounded dashboard budget; long
+research scans should use `src.storage.research` offline.
 Only the first 5,000 discovered IDs are offered (sorted for display); charts and
 coverage are capped at the newest 3,000 observations per window, and books at 1,000
 levels total. Market queries read one exact timestamp (up to 5,000 products), never
