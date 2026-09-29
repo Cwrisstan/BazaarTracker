@@ -73,6 +73,27 @@ class DashboardDataTests(unittest.TestCase):
             self.assertTrue(all(row['product_id'] == 'APPLE' for row in found))
         self.assertEqual(data.history(self.db, "' OR 1=1 --", 0, self.end)[0], [])
 
+    def test_market_snapshot_endpoints_limits_and_no_fallback(self):
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        snapshot, products, limited = data.market_snapshot(self.db, self.end)
+        self.assertEqual(snapshot['source_updated_ms'], self.end - 60000)
+        self.assertEqual([row['product_id'] for row in products], ['APPLE', 'PEAR'])
+        self.assertFalse(limited)
+        self.assertTrue(all(row['source_updated_ms'] == snapshot['source_updated_ms'] for row in products))
+        # A missing one-hour baseline must not become a two-hour comparison.
+        self.assertEqual(data.market_snapshot(self.db, self.end - 3600000, 180000), (None, [], False))
+        baseline, _, _ = data.market_snapshot(self.db, self.end - 540000, 180000)
+        self.assertEqual(baseline['source_updated_ms'], self.end - 540000)
+        self.assertEqual(data.market_snapshot(self.db, 0), (None, [], False))
+        with patch.object(data, 'MAX_ITEMS', 1):
+            _, products, limited = data.market_snapshot(self.db, self.end)
+            self.assertEqual([row['product_id'] for row in products], ['APPLE'])
+            self.assertTrue(limited)
+        self.assertEqual(hashlib.sha256(self.db.read_bytes()).hexdigest(), before)
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            conn.execute("DELETE FROM quick_status WHERE product_id='PEAR' AND source_updated_ms=?", (self.end - 60000,))
+        self.assertEqual([row['product_id'] for row in data.market_snapshot(self.db, self.end)[1]], ['APPLE'])
+
     def test_books_empty_and_stale(self):
         current, book, limited = data.current_item(self.db, 'APPLE', self.end)
         self.assertEqual(book[0]['api_side'], 'buy_summary')
@@ -137,9 +158,36 @@ class DashboardDataTests(unittest.TestCase):
         self.assertTrue(data.storage_sizes(self.db, raw, max_entries=1)['partial'])
 
 
-@unittest.skipUnless(importlib.util.find_spec('streamlit'), 'install requirements-dashboard.txt for UI tests')
+@unittest.skipUnless(importlib.util.find_spec('streamlit') and importlib.util.find_spec('plotly'), 'install requirements-dashboard.txt for UI tests')
 class DashboardAppTests(unittest.TestCase):
-    def test_app_selection_window_refresh_and_stale(self):
+    def test_chart_changes_with_selected_item(self):
+        import json
+        from streamlit.testing.v1 import AppTest
+        with tempfile.TemporaryDirectory() as folder:
+            db = Path(folder) / 'test.sqlite3'
+            fixture(db, int(time.time() * 1000))
+            with closing(sqlite3.connect(db)) as conn, conn:
+                conn.execute("UPDATE quick_status SET buy_price=40, sell_price=20 WHERE product_id='PEAR'")
+            with patch.dict(os.environ, {'BAZAAR_DASHBOARD_DB': str(db)}):
+                app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'src/dashboard/app.py')).run()
+                app.radio(key='page').set_value('Item Explorer').run()
+                identities = {}
+                for item, prices in [('APPLE', {2, 4}), ('PEAR', {20, 40}), ('APPLE', {2, 4})]:
+                    app.selectbox(key='product').select(item).run()
+                    self.assertFalse(app.exception)
+                    chart = app.get('plotly_chart')[0].proto
+                    spec = json.loads(chart.spec)
+                    self.assertIn(item, spec['layout']['title']['text'])
+                    self.assertEqual({v for trace in spec['data'] for v in trace['y'] if v is not None}, prices)
+                    identities[item] = chart.id
+                self.assertNotEqual(identities['APPLE'], identities['PEAR'])
+                for mode in ['Shared scale', 'Indexed (first = 100)', 'Separate scales']:
+                    app.selectbox(key='price_mode').select(mode).run()
+                    self.assertFalse(app.exception)
+                app.multiselect(key='price_series').set_value([]).run()
+                self.assertTrue(any('Select a price series' in w.value for w in app.info))
+
+    def test_pages_windows_filters_refresh_and_stale(self):
         from streamlit.testing.v1 import AppTest
         with tempfile.TemporaryDirectory() as folder:
             db = Path(folder) / 'test.sqlite3'
@@ -148,11 +196,25 @@ class DashboardAppTests(unittest.TestCase):
                 app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'src/dashboard/app.py')).run(timeout=30)
                 self.assertFalse(app.exception)
                 self.assertTrue(any('stale' in w.value for w in app.warning))
-                app.selectbox[1].select('PEAR').run()
+                self.assertEqual(len(app.get('plotly_chart')), 2)
+                self.assertTrue(any('Not enough historical data' in w.value for w in app.info))
+                app.selectbox(key='change_period').select('Recorded range').run()
+                app.radio(key='page').set_value('Item Explorer').run()
+                app.selectbox(key='product').select('PEAR').run()
                 self.assertFalse(app.exception)
                 self.assertTrue(any('Empty stored book' in w.value for w in app.info))
-                app.selectbox[0].select(6).run()
+                for label in ['1h', '6h', '24h', '7d', 'All']:
+                    app.segmented_control(key='item_window').set_value(label).run()
+                    self.assertFalse(app.exception)
+                app.radio(key='page').set_value('Scanner').run()
+                app.text_input(key='scanner_search').set_value('PEAR').run()
                 self.assertFalse(app.exception)
+                self.assertEqual(list(app.dataframe[0].value['Product']), ['PEAR'])
+                app.number_input(key='scan_volume').set_value(100000).run()
+                self.assertTrue(any('No products match' in w.value for w in app.info))
+                app.radio(key='page').set_value('Collector').run()
+                self.assertFalse(app.exception)
+                self.assertTrue(any('Unique snapshots' == m.label for m in app.metric))
                 old = app.session_state['revision']
                 app.button[0].click().run()
                 self.assertNotEqual(old, app.session_state['revision'])
